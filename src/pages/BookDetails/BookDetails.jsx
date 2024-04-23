@@ -1,7 +1,7 @@
 import React from 'react';
 import './BookDetails.css';
 
-const BookDetails = ({ book, buyMethod }) => {
+const BookDetails = ({ book, buyMethod, purchased }) => {
   return (
     <div className="book-details">
       <img src={book.image} alt={book.name} />
@@ -9,7 +9,12 @@ const BookDetails = ({ book, buyMethod }) => {
       <p>ID: {book.id}</p>
       <p>Precio: ${book.price}</p>
 
-      <button onClick={buyMethod}>Comprar</button>
+      {
+        purchased ? (
+          <p>Comprado</p>
+        ) : <button onClick={() => buyMethod(book.id)}>Comprar</button>
+      }
+      
     </div>
   );
 };

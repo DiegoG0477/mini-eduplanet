@@ -1,4 +1,4 @@
-import { React, useEffect } from "react";
+import { React, useEffect, useState } from "react";
 import BookDetails from "../BookDetails/BookDetails";
 import axios from "axios";
 import "./Dashboard.css";
@@ -7,13 +7,62 @@ import Swal from "sweetalert2";
 
 const Dashboard = () => {
     const token = JSON.parse(localStorage.getItem("token"));
+    const [books, setBooks] = useState([]);
+    const [ isFetching, setIsFetching ] = useState(false);
+    const [myBooks, setMyBooks] = useState([]);
 
     useEffect(() => {
-        // Obtener el userId del localStorage
+        if (!token) {
+            window.location.href = "/login";
+        }
+    }, []);
+
+    useEffect(() => {
+        const getBooks = async () => {
+            const response = await axios.get("http://34.197.57.0:4000/books", {
+                headers: {
+                    Authorization: token,
+                },
+            });
+
+            console.log(response.data);
+            setBooks(response.data.data.books);
+        }
+
+        getBooks();
+        setIsFetching(true);
+    }, []);
+
+    useEffect(() => {
+        const getMyBooks = async (books) => {
+            if (books.length > 0) {
+                const response = await axios.get("http://34.197.57.0:4000/posessions",{
+                    headers: {
+                        Authorization: token,
+                    },
+                });
+
+                console.log(response);
+
+                const posessions = response.data.data.posessions;
+
+                const myBooks = posessions.map((posession) => {
+                    const myBook = books.find((book) => book.id === posession.idProduct);
+                    return myBook;
+                }).filter(book => book !== undefined);
+                
+                setMyBooks(myBooks);
+            }
+        }
+
+        getMyBooks(books);
+    }, [books]);
+
+
+    useEffect(() => {
         const userId = JSON.parse(localStorage.getItem("userId"));
         console.log("User ID:", userId);
 
-        // Conectar el socket al servidor
         const socket = io("http://184.72.246.90:4000", {
             auth: {
                 userId: userId,
@@ -44,16 +93,18 @@ const Dashboard = () => {
             text: data.data.msg,
             icon: data.data.status === "success" ? "success" : "error",
         });
+
+        
     };
 
-    const handleOrder = async () => {
-        console.log("Comprando libro");
+    const handleOrder = async (bookId) => {
+        console.log("Comprando libro", bookId);
         alert("Comprando libro");
         const response = await axios
             .post(
                 "http://34.197.57.0:4000/orders",
                 {
-                    productId: "6626bd95f457a92ad9478eed",
+                    productId: bookId,
                 },
                 {
                     headers: {
@@ -74,55 +125,35 @@ const Dashboard = () => {
             <h2>Libros</h2>
             <h5>User ID: {localStorage.getItem("userId")}</h5>
             <div className="book-list">
-                <BookDetails
-                    book={{
-                        id: 1,
-                        name: "El principito",
-                        price: 200,
-                        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREqlXro4gShzXiZQ-ZHarMn_HXWra4Z1MVYGBZDoC6jA&s",
-                    }}
-                    buyMethod={handleOrder}
-                />
+                {books.map((book) => (
+                    <BookDetails
+                        key={book.id}
+                        book={{
+                            id: book.id,
+                            name: book.title,
+                            price: book.price,
+                            image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREqlXro4gShzXiZQ-ZHarMn_HXWra4Z1MVYGBZDoC6jA&s",
+                        }}
+                        buyMethod={handleOrder}
+                    />
+                ))}
+            </div>
 
-                <BookDetails
-                    book={{
-                        id: 2,
-                        name: "El alquimista",
-                        price: 300,
-                        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREqlXro4gShzXiZQ-ZHarMn_HXWra4Z1MVYGBZDoC6jA&s",
-                    }}
-                    buyMethod={handleOrder}
-                />
+            <h2>Mis libros</h2>
 
-                <BookDetails
-                    book={{
-                        id: 3,
-                        name: "El arte de amar",
-                        price: 150,
-                        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREqlXro4gShzXiZQ-ZHarMn_HXWra4Z1MVYGBZDoC6jA&s",
-                    }}
-                    buyMethod={handleOrder}
-                />
-
-                <BookDetails
-                    book={{
-                        id: 4,
-                        name: "La insoportable levedad del ser",
-                        price: 250,
-                        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREqlXro4gShzXiZQ-ZHarMn_HXWra4Z1MVYGBZDoC6jA&s",
-                    }}
-                    buyMethod={handleOrder}
-                />
-
-                <BookDetails
-                    book={{
-                        id: 5,
-                        name: "El amor en los tiempos del cólera",
-                        price: 180,
-                        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREqlXro4gShzXiZQ-ZHarMn_HXWra4Z1MVYGBZDoC6jA&s",
-                    }}
-                    buyMethod={handleOrder}
-                />
+            <div className="book-list">
+                {myBooks.map((book) => (
+                    <BookDetails
+                        key={book.id}
+                        book={{
+                            id: book.id,
+                            name: book.title,
+                            price: book.price,
+                            image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREqlXro4gShzXiZQ-ZHarMn_HXWra4Z1MVYGBZDoC6jA&s",
+                        }}
+                        purchased={true}
+                    />
+                ))}
             </div>
         </div>
     );
